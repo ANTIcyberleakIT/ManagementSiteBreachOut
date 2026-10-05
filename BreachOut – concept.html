@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BreachOut – IronHold Labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9ecef; --panel:#ffffff; --panel-2:#f2f4f6; --line:#cfd6dd;
+  --text:#1b2229; --muted:#5b6876; --accent:#f2c230; --accent-ink:#1c1600;
+  --ok:#1f8a55; --busy:#1c6fb5; --bad:#c0392f; --bar:#1b2229; --bar-text:#eef1f4;
+  --font-head:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a2027; --panel:#242c35; --panel-2:#2d3742; --line:#3a4654;
+    --text:#eef1f4; --muted:#9aa7b5; --ok:#5fc48a; --busy:#5aa9e6; --bad:#e5645a;
+    --bar:#12171c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1a2027; --panel:#242c35; --panel-2:#2d3742; --line:#3a4654;
+  --text:#eef1f4; --muted:#9aa7b5; --ok:#5fc48a; --busy:#5aa9e6; --bad:#e5645a; --bar:#12171c;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--font-body)}
+h1,h2,h3{font-family:var(--font-head);font-weight:700;margin:0;line-height:1.05}
+h1{font-size:2.6rem} h2{font-size:1.6rem} h3{font-size:1.25rem}
+p{margin:.25rem 0}
+.muted{color:var(--muted)}
+:focus-visible{outline:2px solid var(--busy);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* top bar */
+.topbar{background:var(--bar);color:var(--bar-text);position:sticky;top:0;z-index:5}
+.topbar .in{display:flex;align-items:center;gap:1.5rem;padding:.7rem 1.5rem;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.hazard{height:8px;background:repeating-linear-gradient(-45deg,var(--accent) 0 14px,var(--bar) 14px 28px)}
+.brand{font:700 1.7rem var(--font-head);display:flex;align-items:center;gap:.6rem}
+.brand svg{width:30px;height:30px}
+.brand small{font:500 .75rem var(--font-body);opacity:.65;display:block;margin-top:-4px}
+.nav{display:flex;gap:.25rem;flex:1}
+.nav button{background:none;border:0;color:inherit;opacity:.7;font:500 1rem var(--font-body);padding:.5rem 1rem;border-radius:4px;cursor:pointer}
+.nav button:hover{opacity:1;background:rgba(255,255,255,.08)}
+.nav button[aria-current="page"]{opacity:1;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.who{display:flex;gap:.6rem;align-items:center;font-size:.9rem}
+
+main{max-width:1240px;margin:0 auto;padding:1.5rem}
+.head{display:flex;justify-content:space-between;align-items:end;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+
+/* buttons, fields */
+.btn{font:600 .95rem var(--font-body);padding:.55rem 1rem;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad);background:transparent}
+.btn.sm{padding:.28rem .65rem;font-size:.85rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.bar .btn{background:transparent;color:var(--bar-text);border-color:rgba(255,255,255,.3)}
+label{display:block;font-size:.9rem;color:var(--muted);margin:.9rem 0 .25rem}
+input{width:100%;padding:.6rem .7rem;background:var(--bg);border:1px solid var(--line);border-radius:4px;color:var(--text);font:inherit}
+.badge{display:inline-block;padding:.05rem .55rem;border-radius:99px;font-size:.8rem;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.ok{color:var(--ok);border-color:var(--ok)} .badge.busy{color:var(--busy);border-color:var(--busy)} .badge.bad{color:var(--bad);border-color:var(--bad)}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+
+/* login */
+.loginwrap{min-height:calc(100vh - 16px);display:grid;grid-template-columns:1.1fr 1fr}
+.pitch{background:var(--bar);color:var(--bar-text);padding:3rem;display:flex;flex-direction:column;justify-content:center;gap:1.25rem;position:relative;overflow:hidden}
+.pitch h1{font-size:4.2rem}
+.pitch p{max-width:34ch;opacity:.75;font-size:1.1rem}
+.pitch svg.vault{position:absolute;right:-90px;bottom:-90px;width:380px;opacity:.12}
+.formside{display:grid;place-items:center;padding:2rem}
+.login{width:100%;max-width:380px}
+.login .btn{width:100%;margin-top:1.5rem;padding:.75rem}
+@media(max-width:800px){.loginwrap{grid-template-columns:1fr}.pitch{padding:2rem}.pitch h1{font-size:3rem}}
+
+/* challenges */
+.hero{display:flex;align-items:center;gap:1.5rem;background:var(--panel);border:1px solid var(--line);padding:1.25rem 1.5rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.ring{width:84px;height:84px}
+.ring text{font:700 24px var(--font-head);fill:var(--text)}
+.filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.filters button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:.3rem .9rem;cursor:pointer;font:inherit}
+.filters button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);padding:1rem 1rem .9rem;text-align:left;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:.5rem;min-height:160px;font:inherit;position:relative}
+.card:hover{border-color:var(--text)}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--line)}
+.card.solved::before{background:var(--ok)} .card.active::before{background:var(--busy)} .card.locked{opacity:.55}
+.card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
+.pts{font:700 1.4rem var(--font-head)}
+.dots{display:inline-flex;gap:3px;vertical-align:middle;margin-left:.4rem}
+.dots i{width:8px;height:8px;background:var(--line);display:block}
+.dots i.on{background:var(--accent)}
+
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(450px,100%);background:var(--panel);border-left:1px solid var(--line);padding:calc(1.5rem + env(safe-area-inset-top,0px)) 1.5rem 1.5rem;overflow:auto;transform:translateX(100%);transition:transform .2s;z-index:10;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
+.drawer.open{transform:none}
+.connect{background:var(--bar);color:var(--bar-text);padding:1rem;margin:1rem 0;font:.9rem ui-monospace,Menlo,Consolas,monospace}
+.connect div{display:flex;justify-content:space-between;gap:1rem;padding:.15rem 0}
+.connect span:first-child{opacity:.6}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--busy);border-radius:50%;display:inline-block;animation:r .8s linear infinite;vertical-align:-3px;margin-right:.4rem}
+@keyframes r{to{transform:rotate(360deg)}}
+
+/* tables */
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{padding:.6rem .8rem;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font:600 .85rem var(--font-body);color:var(--muted);background:var(--panel-2)}
+tr:last-child td{border-bottom:0}
+.cell{display:inline-block;width:22px;height:22px;border:1px solid var(--line);vertical-align:middle;margin-right:2px}
+.cell.done{background:var(--ok);border-color:var(--ok)}
+.cell.now{background:var(--busy);border-color:var(--busy);animation:p 1.4s infinite}
+@keyframes p{50%{opacity:.35}}
+.legend{display:flex;gap:1.25rem;margin-bottom:.75rem;font-size:.9rem;color:var(--muted);flex-wrap:wrap}
+.rank{font:700 1.5rem var(--font-head);width:2.5rem}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem}
+.pod{background:var(--panel);border:1px solid var(--line);padding:1rem;border-top:6px solid var(--line)}
+.pod.p1{border-top-color:var(--accent)}
+.pod b{font:700 2.2rem var(--font-head);display:block}
+@media(max-width:600px){.podium{grid-template-columns:1fr}}
+
+/* admin */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--panel);border:1px solid var(--line);padding:.9rem 1rem}
+.stat b{display:block;font:700 2.2rem var(--font-head)}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.log{background:var(--bar);color:#9aa7b5;padding:.75rem;font:.85rem/1.6 ui-monospace,Menlo,Consolas,monospace;height:400px;overflow:auto}
+.log .t{color:var(--accent)}
+.toast{position:fixed;bottom:calc(1.25rem + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--bar);color:var(--bar-text);padding:.6rem 1.1rem;border-radius:4px;font-weight:600;z-index:20}
+@media(prefers-reduced-motion:reduce){.cell.now,.spin{animation:none}.drawer{transition:none}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="v-login">
+  <div class="hazard"></div>
+  <div class="loginwrap">
+    <div class="pitch">
+      <svg class="vault" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><circle cx="50" cy="50" r="46"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="6"/><path d="M50 4v20M50 76v20M4 50h20M76 50h20M17 17l14 14M69 69l14 14M83 17L69 31M31 69L17 83"/></svg>
+      <h1>BreachOut</h1>
+      <p>Ten challenges. Your own environment. Crack the vault of IronHold Labs.</p>
+    </div>
+    <div class="formside">
+      <form class="login" id="loginForm">
+        <h2>Log in</h2>
+        <label for="naam">Username</label>
+        <input id="naam" required autocomplete="username" placeholder="e.g. kyan">
+        <label for="ww">Password</label>
+        <input id="ww" type="password" required autocomplete="current-password">
+        <button class="btn primary" type="submit">Log in</button>
+        <p class="muted" style="margin-top:1rem;font-size:.85rem">Concept: any combination works. Log in as <b>admin</b> to also see the admin page.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app" hidden>
+  <header class="topbar bar">
+    <div class="in">
+      <div class="brand">
+        <svg viewBox="0 0 100 100" fill="none" stroke="#f2c230" stroke-width="7"><circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="10"/><path d="M50 8v24M50 68v24M8 50h24M68 50h24"/></svg>
+        <div>BreachOut<small>IronHold Labs</small></div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="who"><span id="who"></span><button class="btn sm" id="logout">Log out</button></div>
+    </div>
+    <div class="hazard"></div>
+  </header>
+
+  <main>
+    <!-- CHALLENGES -->
+    <section id="v-challenges">
+      <div class="head"><div><h1>Challenges</h1><p class="muted">Pick a challenge and start your own environment.</p></div></div>
+      <div class="hero" id="hero"></div>
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="v-dashboard" hidden>
+      <div class="head"><div><h1>Dashboard</h1><p class="muted">Who is where? Refreshes automatically.</p></div><span class="badge ok">Live</span></div>
+      <div class="podium" id="podium"></div>
+      <div class="legend">
+        <span><i class="cell done"></i> Solved</span>
+        <span><i class="cell now"></i> Working on it now</span>
+        <span><i class="cell"></i> Not started</span>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Working on</th><th>Challenges 1 to 10</th><th>Points</th></tr></thead>
+        <tbody id="board"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="v-admin" hidden>
+      <div class="head">
+        <div><h1>Admin</h1><p class="muted">Start, stop and reset the environments.</p></div>
+        <div class="row">
+          <button class="btn" data-all="start">Start all</button>
+          <button class="btn" data-all="reset">Reset all</button>
+          <button class="btn danger" data-all="stop">Stop all</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="s-act">0</b>Active environments</div>
+        <div class="stat"><b id="s-pl">0</b>Players online</div>
+        <div class="stat"><b id="s-fl">0</b>Solved flags</div>
+        <div class="stat"><b>10</b>Total challenges</div>
+      </div>
+      <div class="two">
+        <div>
+          <h2 style="margin-bottom:.6rem">Challenges</h2>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Challenge</th><th>Category</th><th>Level</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="adminBody"></tbody>
+          </table></div>
+        </div>
+        <div>
+          <h2 style="margin-bottom:.6rem">Log</h2>
+          <div class="log" id="log" role="log"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Challenge details"></aside>
+
+<script>
+/* ===== Data (mock) ===== */
+const NIVEAU=["","Beginner","Intermediate","Advanced"];
+const CATS=["Authentication","Phishing & Social Engineering","Network & Firewall","Forensics & Log Analysis","Encryption & Data Protection"];
+const CH=[
+ // Beginner
+ {id:1,naam:"Open door",cat:"Authentication",n:1,p:100,
+   tekst:"An old IronHold intranet is online. The admin panel still uses its default credentials — find the login page and get in.",
+   hint:["Scan the web server with nmap to find the login page.","Try default credential combinations (admin/admin, admin/password).","Check the documentation of the software used — defaults are often listed there."]},
+ {id:2,naam:"Weak port",cat:"Network & Firewall",n:1,p:100,
+   tekst:"Scan the host and find the one service the firewall never locked down. Connect to it and see what it gives up.",
+   hint:["Run nmap -sV to see open ports and service versions.","Connect to the unlocked service with nc or the matching client.","Look at what is accessible without logging in."]},
+ {id:3,naam:"Suspicious mail",cat:"Phishing & Social Engineering",n:1,p:100,
+   tekst:"An employee forwarded a suspicious email. Check the sender domain and headers to prove it's spoofed and uncover the hidden flag.",
+   hint:["Inspect the full email headers (SPF, DKIM, Return-Path).","Compare the real domain with the displayed domain.","Look for the flag hidden in a header field or attachment."]},
+ {id:4,naam:"Hidden message",cat:"Encryption & Data Protection",n:1,p:100,
+   tekst:"An intercepted note looks like nonsense at first glance. Recognize the encoding and decode it to reveal the flag.",
+   hint:["Recognize the type of encoding (Base64, Caesar cipher, hex).","Use CyberChef (online tool) or base64 -d to decode.","For a Caesar cipher, just try all 25 shifts."]},
+ // Intermediate
+ {id:5,naam:"Person of interest",cat:"Phishing & Social Engineering",n:2,p:200,
+   tekst:"Using only public information, identify the employee behind an anonymous account and recover the answer to their security question.",
+   hint:["Search by name/username on LinkedIn, GitHub and social media.","Look for date of birth, pet name or favorite sports club.","These often double as the answer to a \"security question\" for password resets."]},
+ {id:6,naam:"Digital traces",cat:"Forensics & Log Analysis",n:2,p:200,
+   tekst:"Examine a disk image left behind after an incident and reconstruct what the attacker deleted.",
+   hint:["Analyze the disk image with autopsy or sleuthkit.","Look for deleted or hidden files.","Reconstruct the timeline of what happened."]},
+ {id:7,naam:"Keyring",cat:"Encryption & Data Protection",n:2,p:200,
+   tekst:"A backup archive contains a private SSH key. Extract it, crack its passphrase, and use it to reach the next machine.",
+   hint:["Extract the backup file and look for an id_rsa file.","Crack the passphrase with ssh2john followed by john.","Log in with ssh -i id_rsa."]},
+ // Advanced
+ {id:8,naam:"Session hijack",cat:"Authentication",n:3,p:300,
+   tekst:"A web app trusts its session cookies a little too much. Steal and replay one to log in as another user without ever knowing their password.",
+   hint:["Find an XSS or insecure-cookie vulnerability to steal another user's session cookie.","Paste that cookie into your own browser (or use curl -b) to become logged in as that user.","No password is ever needed."]},
+ {id:9,naam:"Silent sniffer",cat:"Network & Firewall",n:3,p:300,
+   tekst:"Get past the network segmentation with an ARP spoofing attack, capture the traffic between two servers, and decrypt the secret inside it.",
+   hint:["Run an ARP spoofing attack between the two servers with ettercap or bettercap.","Capture the traffic with tcpdump or Wireshark.","Decrypt or analyze what you intercepted."]},
+ {id:10,naam:"Logbook",cat:"Forensics & Log Analysis",n:3,p:300,
+   tekst:"Thousands of lines of server logs hide one attacker. Correlate timestamps and requests to trace their full path through the system.",
+   hint:["Search the log files with grep/awk for unusual patterns (repeated failed requests, odd user agents).","Follow the timestamps to reconstruct the attacker's full path."]}
+];
+const byId=id=>CH.find(c=>c.id===id);
+const PL=[
+ {naam:"Kyan",huidig:3,ok:[1]},{naam:"Lance",huidig:5,ok:[1,3]},{naam:"Jesse",huidig:null,ok:[9]},
+ {naam:"Sanne",huidig:7,ok:[1,5,9]},{naam:"Daan",huidig:2,ok:[]},{naam:"Mila",huidig:9,ok:[3]}
+];
+const pts=s=>s.ok.reduce((t,id)=>t+byId(id).p,0);
+
+/* admin state per challenge: gestopt | bezig | actief */
+const env={}; CH.forEach(c=>env[c.id]="actief"); env[4]="gestopt"; env[10]="gestopt";
+/* state for the logged-in player: vrij | opbouwen | actief | opgelost */
+const mij={}; CH.forEach(c=>mij[c.id]="vrij");
+let me=null, filter="Alle", lvlFilter="Alle", open=null, tab="challenges";
+
+const $=s=>document.querySelector(s);
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2400)}
+function log(t){const l=$("#log");l.innerHTML+=`<div><span class="t">${new Date().toLocaleTimeString("en-GB")}</span> ${t}</div>`;l.scrollTop=l.scrollHeight}
+function safeGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function safeSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+/* ===== Login / nav ===== */
+$("#loginForm").onsubmit=e=>{
+  e.preventDefault();
+  const naam=$("#naam").value.trim();
+  me={naam,rol:naam.toLowerCase()==="admin"?"admin":"speler"};
+  safeSet("bo_user",JSON.stringify(me)); start();
+};
+$("#logout").onclick=()=>{me=null;safeSet("bo_user","");$("#app").hidden=true;$("#v-login").hidden=false;closeDrawer()};
+function start(){
+  $("#v-login").hidden=true;$("#app").hidden=false;
+  $("#who").textContent=me.naam+(me.rol==="admin"?" (admin)":"");
+  const t=[["challenges","Challenges"],["dashboard","Dashboard"]];
+  if(me.rol==="admin")t.push(["admin","Admin"]);
+  $("#nav").innerHTML=t.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join("");
+  $("#nav").onclick=e=>{const k=e.target.dataset.tab;if(k)go(k)};
+  go("challenges");
+}
+function go(k){
+  tab=k;closeDrawer();
+  ["challenges","dashboard","admin"].forEach(x=>$("#v-"+x).hidden=x!==k);
+  document.querySelectorAll("#nav button").forEach(b=>b.toggleAttribute("aria-current",b.dataset.tab===k)||b.removeAttribute("aria-current"));
+  document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.tab===k)b.setAttribute("aria-current","page")});
+  render();window.scrollTo(0,0);
+}
+
+/* ===== Challenges ===== */
+function statusBadge(id){
+  if(mij[id]==="opgelost")return'<span class="badge ok">Solved</span>';
+  if(mij[id]==="opbouwen")return'<span class="badge busy">Building</span>';
+  if(mij[id]==="actief")return'<span class="badge busy">Your environment is running</span>';
+  if(env[id]==="gestopt")return'<span class="badge bad">Unavailable</span>';
+  return'<span class="badge">Available</span>';
+}
+function renderChallenges(){
+  const done=CH.filter(c=>mij[c.id]==="opgelost");
+  const p=done.reduce((t,c)=>t+c.p,0), r=34, circ=2*Math.PI*r;
+  $("#hero").innerHTML=`
+    <svg class="ring" viewBox="0 0 84 84"><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--line)" stroke-width="8"/>
+      <circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-done.length/10)}" transform="rotate(-90 42 42)"/>
+      <text x="42" y="50" text-anchor="middle">${done.length}/10</text></svg>
+    <div><h2>${p} points</h2><p class="muted">${done.length===0?"Nothing solved yet. Start with an easy challenge.":done.length+" of 10 challenges solved."}</p></div>`;
+  $("#filters").innerHTML=
+    `<span class="muted" style="align-self:center;margin-right:.25rem">Level:</span>` +
+    ["Alle","Beginner","Intermediate","Advanced"].map(l=>`<button aria-pressed="${l===lvlFilter}" data-l="${l}">${l==="Alle"?"All":l}</button>`).join("") +
+    `<span class="muted" style="align-self:center;margin:0 .25rem 0 .75rem">Category:</span>` +
+    ["Alle",...CATS].map(c=>`<button aria-pressed="${c===filter}" data-f="${c}">${c==="Alle"?"All":c}</button>`).join("");
+  $("#grid").innerHTML=CH.filter(c=>(filter==="Alle"||c.cat===filter)&&(lvlFilter==="Alle"||NIVEAU[c.n]===lvlFilter)).map(c=>`
+    <button class="card ${mij[c.id]==="opgelost"?"solved":""} ${mij[c.id]==="actief"||mij[c.id]==="opbouwen"?"active":""} ${env[c.id]==="gestopt"&&mij[c.id]==="vrij"?"locked":""}" data-id="${c.id}">
+      <div class="muted">${c.cat}<span class="dots" title="${NIVEAU[c.n]}">${[1,2,3].map(i=>`<i class="${i<=c.n?"on":""}"></i>`).join("")}</span> ${NIVEAU[c.n]}</div>
+      <h3>${c.naam}</h3>
+      <div class="meta">${statusBadge(c.id)}<span class="pts">${c.p}</span></div>
+    </button>`).join("");
+}
+$("#filters").onclick=e=>{
+  if(e.target.dataset.f){filter=e.target.dataset.f;renderChallenges()}
+  if(e.target.dataset.l){lvlFilter=e.target.dataset.l;renderChallenges()}
+};
+$("#grid").onclick=e=>{const c=e.target.closest(".card");if(c)openDrawer(+c.dataset.id)};
+
+function openDrawer(id){
+  open=id;const c=byId(id),s=mij[id];let body="";
+  if(s==="vrij")body=env[id]==="gestopt"
+    ?`<p class="muted" style="margin-top:1rem">This challenge is not available right now. Ask an admin to start it.</p>`
+    :`<div class="row" style="margin-top:1rem"><button class="btn primary" onclick="startEnv(${id})">Start environment</button></div>
+      <p class="muted" style="margin-top:.75rem;font-size:.9rem">You get your own Ubuntu machine, separate from everyone else's environments.</p>`;
+  if(s==="opbouwen")body=`<p style="margin-top:1rem"><span class="spin"></span>Your environment is being built. This takes about a minute.</p>`;
+  if(s==="actief")body=`
+    <div class="connect">
+      <div><span>Address</span><span>10.10.${id}.5</span></div>
+      <div><span>User</span><span>student</span></div>
+      <div><span>Password</span><span>Ijs8-kaBoom</span></div>
+      <div><span>Expires in</span><span>58:12</span></div>
+    </div>
+    <div class="row"><a class="btn primary" href="rdp://full%20address=s:10.10.${id}.5">Open RDP</a>
+      <button class="btn" onclick="resetEnv(${id})">Reset environment</button>
+      <button class="btn danger" onclick="stopEnv(${id})">Stop</button></div>
+    <label for="vlag">Flag</label>
+    <div class="row"><input id="vlag" placeholder="FLAG{...}" style="flex:1"><button class="btn" onclick="submitFlag(${id})">Submit</button></div>`;
+  if(s==="opgelost")body=`<p style="margin-top:1rem"><span class="badge ok">Solved</span> Well done, ${c.p} points earned.</p>`;
+  const hint=`<details style="margin-top:1rem"><summary class="btn sm" style="display:inline-block">Show hint</summary>
+    <ul style="margin:.6rem 0 0;padding-left:1.1rem">${c.hint.map(h=>`<li style="margin-bottom:.3rem">${h}</li>`).join("")}</ul></details>`;
+  $("#drawer").innerHTML=`<div class="row" style="justify-content:space-between"><span class="muted">${c.cat} · ${NIVEAU[c.n]}</span><button class="btn sm" onclick="closeDrawer()">Close</button></div>
+    <h2 style="margin-top:.75rem">${c.naam}</h2><p class="pts">${c.p} points</p>
+    <p style="margin-top:.75rem">${c.tekst}</p>${body}${hint}`;
+  $("#drawer").classList.add("open");
+}
+function closeDrawer(){$("#drawer").classList.remove("open");open=null}
+function setMij(id,s){mij[id]=s;const p=PL.find(x=>x.naam===me.naam);renderChallenges();if(open===id)openDrawer(id)}
+function startEnv(id){setMij(id,"opbouwen");setTimeout(()=>{setMij(id,"actief");toast("Environment is ready")},2500)}
+function resetEnv(id){setMij(id,"opbouwen");setTimeout(()=>{setMij(id,"actief");toast("Environment has been reset")},2500)}
+function stopEnv(id){setMij(id,"vrij");toast("Environment stopped")}
+function submitFlag(id){
+  if(!$("#vlag").value.trim())return toast("Enter a flag first");
+  setMij(id,"opgelost");toast("Correct! Flag accepted");
+}
+
+/* ===== Dashboard ===== */
+function renderDashboard(){
+  const ik=me&&me.rol!=="admin"?{naam:me.naam,huidig:CH.find(c=>mij[c.id]==="actief"||mij[c.id]==="opbouwen")?.id||null,ok:CH.filter(c=>mij[c.id]==="opgelost").map(c=>c.id)}:null;
+  const lijst=[...PL.filter(s=>!ik||s.naam.toLowerCase()!==ik.naam.toLowerCase()),...(ik?[ik]:[])].sort((a,b)=>pts(b)-pts(a));
+  $("#podium").innerHTML=lijst.slice(0,3).map((s,i)=>`<div class="pod p${i+1}"><span class="muted">Place ${i+1}</span><b>${s.naam}</b>${pts(s)} points</div>`).join("");
+  $("#board").innerHTML=lijst.map((s,i)=>`<tr style="${ik&&s===ik?"background:var(--panel-2)":""}">
+    <td class="rank">${i+1}</td><td><b>${s.naam}</b>${ik&&s===ik?' <span class="badge">you</span>':""}</td>
+    <td>${s.huidig?`<span class="badge busy">${byId(s.huidig).naam}</span>`:'<span class="muted">Not active</span>'}</td>
+    <td>${CH.map(c=>`<i class="cell ${s.ok.includes(c.id)?"done":s.huidig===c.id?"now":""}" title="${c.naam}"></i>`).join("")}</td>
+    <td class="pts">${pts(s)}</td></tr>`).join("");
+}
+setInterval(()=>{
+  const s=PL[Math.floor(Math.random()*PL.length)];
+  if(s.huidig&&Math.random()<.5){if(!s.ok.includes(s.huidig))s.ok.push(s.huidig);s.huidig=null}
+  else if(!s.huidig){const v=CH.filter(c=>!s.ok.includes(c.id)&&env[c.id]==="actief");if(v.length)s.huidig=v[Math.floor(Math.random()*v.length)].id}
+  if(tab==="dashboard")renderDashboard();
+  if(tab==="admin")renderAdmin();
+},3000);
+
+/* ===== Admin ===== */
+const eb={gestopt:'<span class="badge">Stopped</span>',bezig:'<span class="badge busy">Working…</span>',actief:'<span class="badge ok">Active</span>'};
+function renderAdmin(){
+  $("#adminBody").innerHTML=CH.map(c=>`<tr><td><b>${c.naam}</b></td><td>${c.cat}</td><td>${NIVEAU[c.n]}</td><td>${eb[env[c.id]]}</td>
+   <td><div class="row">
+    <button class="btn sm primary" ${env[c.id]!=="gestopt"?"disabled":""} data-a="start" data-id="${c.id}">Start</button>
+    <button class="btn sm" ${env[c.id]==="gestopt"?"disabled":""} data-a="reset" data-id="${c.id}">Reset</button>
+    <button class="btn sm danger" ${env[c.id]==="gestopt"?"disabled":""} data-a="stop" data-id="${c.id}">Stop</button></div></td></tr>`).join("");
+  $("#s-act").textContent=CH.filter(c=>env[c.id]==="actief").length;
+  $("#s-pl").textContent=PL.length;
+  $("#s-fl").textContent=PL.reduce((t,s)=>t+s.ok.length,0);
+}
+/* Hook Terraform/Ansible in here later, e.g. fetch("/api/admin/challenges/3/start", {method:"POST"}) */
+function actie(id,wat){
+  const n=byId(id).naam;
+  if(wat==="stop"){env[id]="gestopt";log(`"${n}" torn down (terraform destroy)`);renderAdmin();return}
+  env[id]="bezig";renderAdmin();
+  log(wat==="start"?`"${n}" is being built (terraform apply + ansible-playbook)`:`"${n}" is being reset to its initial state`);
+  setTimeout(()=>{env[id]="actief";log(`"${n}" is active`);if(tab==="admin")renderAdmin()},2000);
+}
+$("#adminBody").onclick=e=>{const b=e.target.closest("button");if(b&&!b.disabled)actie(+b.dataset.id,b.dataset.a)};
+document.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>{
+  const w=b.dataset.all;CH.forEach(c=>{if(w==="start"?env[c.id]==="gestopt":env[c.id]!=="gestopt")actie(c.id,w)});
+});
+log("Admin page loaded");
+
+function render(){renderChallenges();renderDashboard();renderAdmin()}
+try{const u=JSON.parse(safeGet("bo_user")||"null");if(u&&u.naam){me=u;start()}}catch(e){}
+</script>
+</body>
+</html>
