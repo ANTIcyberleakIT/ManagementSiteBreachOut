@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BreachOut</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<section id="v-login">
+  <div class="loginwrap">
+    <form class="login" id="loginForm">
+      <h1>BreachOut</h1>
+      <p class="muted">Log in to start your challenges.</p>
+      <label for="u">Username</label>
+      <input id="u" required>
+      <label for="p">Password</label>
+      <input id="p" type="password" required>
+      <button class="btn primary" type="submit">Log in</button>
+      <p class="muted" style="margin-top:1rem;font-size:.85rem">No account yet? <a href="#" id="toRegister">Register</a></p>
+      <p class="error" id="loginErr" hidden></p>
+    </form>
+    <form class="login" id="registerForm" hidden>
+      <h1>Register</h1>
+      <label for="ru">Username</label>
+      <input id="ru" required>
+      <label for="rp">Password</label>
+      <input id="rp" type="password" required>
+      <button class="btn primary" type="submit">Create account</button>
+      <p class="muted" style="margin-top:1rem;font-size:.85rem">Already have an account? <a href="#" id="toLogin">Log in</a></p>
+      <p class="error" id="regErr" hidden></p>
+    </form>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="in">
+      <div class="brand">BreachOut<small>IronHold Labs</small></div>
+      <nav class="nav" id="nav"></nav>
+      <div class="who"><span id="who"></span><button class="btn sm" id="logout">Log out</button></div>
+    </div>
+    <div class="hazard"></div>
+  </header>
+
+  <main>
+    <section id="v-challenges">
+      <div class="head"><div><h1>Challenges</h1><p class="muted">Pick a challenge and start your own environment.</p></div></div>
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section id="v-dashboard" hidden>
+      <div class="head"><h1>Dashboard</h1></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>#</th><th>Player</th><th>Working on</th><th>Solved</th><th>Points</th></tr></thead>
+        <tbody id="board"></tbody>
+      </table></div>
+    </section>
+
+    <section id="v-admin" hidden>
+      <div class="head"><h1>Admin</h1></div>
+      <div class="formcard">
+        <h2>Add challenge</h2>
+        <form id="addForm">
+          <label>Name</label><input id="f-name" required>
+          <label>Category</label><input id="f-cat" required>
+          <label>Level</label>
+          <select id="f-level"><option value="1">Beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select>
+          <label>Points</label><input id="f-points" type="number" value="100" required>
+          <label>Description</label><textarea id="f-desc" required></textarea>
+          <label>Flag</label><input id="f-flag" placeholder="FLAG{...}" required>
+          <button class="btn primary" type="submit" style="margin-top:1rem">Add challenge</button>
+          <p class="error" id="addErr" hidden></p>
+        </form>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Name</th><th>Category</th><th>Level</th><th>Points</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="adminBody"></tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+
+<aside class="drawer" id="drawer"></aside>
+
+<script>
+const $=s=>document.querySelector(s);
+let me=null, tab="challenges", challenges=[], openId=null;
+
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2400)}
+async function api(path,opts={}){
+  const res=await fetch(path,{headers:{"Content-Type":"application/json"},credentials:"same-origin",...opts});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||"Request failed");
+  return data;
+}
+
+/* ---------- auth ---------- */
+$("#toRegister").onclick=e=>{e.preventDefault();$("#loginForm").hidden=true;$("#registerForm").hidden=false};
+$("#toLogin").onclick=e=>{e.preventDefault();$("#registerForm").hidden=true;$("#loginForm").hidden=false};
+
+$("#loginForm").onsubmit=async e=>{
+  e.preventDefault();$("#loginErr").hidden=true;
+  try{
+    const data=await api("/api/auth/login",{method:"POST",body:JSON.stringify({username:$("#u").value,password:$("#p").value})});
+    me={username:data.username,role:data.role}; start();
+  }catch(err){$("#loginErr").textContent=err.message;$("#loginErr").hidden=false}
+};
+$("#registerForm").onsubmit=async e=>{
+  e.preventDefault();$("#regErr").hidden=true;
+  try{
+    await api("/api/auth/register",{method:"POST",body:JSON.stringify({username:$("#ru").value,password:$("#rp").value})});
+    toast("Account created, you can log in now");
+    $("#registerForm").hidden=true;$("#loginForm").hidden=false;
+  }catch(err){$("#regErr").textContent=err.message;$("#regErr").hidden=false}
+};
+$("#logout").onclick=async()=>{await api("/api/auth/logout",{method:"POST"});location.reload()};
+
+async function start(){
+  $("#v-login").hidden=true;$("#app").hidden=false;
+  $("#who").textContent=me.username+(me.role==="admin"?" (admin)":"");
+  const t=[["challenges","Challenges"],["dashboard","Dashboard"]];
+  if(me.role==="admin")t.push(["admin","Admin"]);
+  $("#nav").innerHTML=t.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join("");
+  $("#nav").onclick=e=>{if(e.target.dataset.tab)go(e.target.dataset.tab)};
+  go("challenges");
+}
+function go(k){
+  tab=k;closeDrawer();
+  ["challenges","dashboard","admin"].forEach(x=>$("#v-"+x).hidden=x!==k);
+  document.querySelectorAll("#nav button").forEach(b=>b.toggleAttribute("aria-current",false));
+  document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.tab===k)b.setAttribute("aria-current","page")});
+  render();
+}
+async function render(){
+  if(tab==="challenges")await renderChallenges();
+  if(tab==="dashboard")await renderDashboard();
+  if(tab==="admin")await renderAdmin();
+}
+
+/* ---------- challenges ---------- */
+let filter="All";
+async function renderChallenges(){
+  challenges=await api("/api/challenges");
+  const cats=["All",...new Set(challenges.map(c=>c.category))];
+  $("#filters").innerHTML=cats.map(c=>`<button aria-pressed="${c===filter}" data-f="${c}">${c}</button>`).join("");
+  $("#grid").innerHTML=challenges.filter(c=>filter==="All"||c.category===filter).map(c=>`
+    <button class="card ${c.status==='solved'?'solved':''} ${c.status==='active'?'active':''}" data-id="${c.id}">
+      <div class="muted">${c.category} · ${c.level_name}</div>
+      <h3>${c.name}</h3>
+      <div class="meta">
+        <span class="badge ${c.status==='solved'?'ok':c.status==='active'?'busy':c.available?'':'bad'}">${!c.available?'Unavailable':c.status==='stopped'?'Available':c.status}</span>
+        <span class="pts">${c.points}</span>
+      </div>
+    </button>`).join("");
+}
+$("#filters").onclick=e=>{if(e.target.dataset.f){filter=e.target.dataset.f;renderChallenges()}};
+$("#grid").onclick=e=>{const c=e.target.closest(".card");if(c)openDrawer(+c.dataset.id)};
+
+async function openDrawer(id){
+  openId=id;
+  const c=challenges.find(x=>x.id===id);
+  let body="";
+  if(c.status==="stopped")body=c.available
+    ? `<div class="row" style="margin-top:1rem"><button class="btn primary" onclick="act(${id},'start')">Start environment</button></div>`
+    : `<p class="muted" style="margin-top:1rem">Not available right now.</p>`;
+  if(c.status==="active")body=`
+    <div class="connect" id="connectInfo">Loading connection info…</div>
+    <div class="row"><button class="btn" onclick="act(${id},'reset')">Reset</button><button class="btn danger" onclick="act(${id},'stop')">Stop</button></div>
+    <label>Flag</label>
+    <div class="row"><input id="flagInput" placeholder="FLAG{...}" style="flex:1"><button class="btn" onclick="submitFlag(${id})">Submit</button></div>`;
+  if(c.status==="solved")body=`<p style="margin-top:1rem"><span class="badge ok">Solved</span> ${c.points} points earned.</p>`;
+  $("#drawer").innerHTML=`<div class="row" style="justify-content:space-between"><span class="muted">${c.category} · ${c.level_name}</span><button class="btn sm" onclick="closeDrawer()">Close</button></div>
+    <h2 style="margin-top:.75rem">${c.name}</h2><p class="pts">${c.points} points</p>
+    <p style="margin-top:.75rem">${c.description}</p>${body}`;
+  $("#drawer").classList.add("open");
+}
+function closeDrawer(){$("#drawer").classList.remove("open");openId=null}
+
+async function act(id,action){
+  try{
+    const data=await api(`/api/challenges/${id}/${action}`,{method:"POST"});
+    await renderChallenges();
+    if(openId===id)await openDrawer(id);
+    if(action==="start"||action==="reset"){
+      const el=$("#connectInfo");
+      if(el)el.innerHTML=`<div><span>Address</span><span>${data.address}</span></div><div><span>User</span><span>${data.user}</span></div><div><span>Password</span><span>${data.password}</span></div>`;
+      toast(action==="start"?"Environment is ready":"Environment reset");
+    }
+    if(action==="stop")toast("Environment stopped");
+  }catch(err){toast(err.message)}
+}
+async function submitFlag(id){
+  const val=$("#flagInput").value.trim();
+  if(!val)return toast("Enter a flag first");
+  const data=await api(`/api/challenges/${id}/submit`,{method:"POST",body:JSON.stringify({flag:val})});
+  if(data.ok){toast(`Correct! +${data.points} points`);await renderChallenges();await openDrawer(id)}
+  else toast(data.error||"Incorrect flag");
+}
+
+/* ---------- dashboard ---------- */
+async function renderDashboard(){
+  const board=await api("/api/dashboard");
+  $("#board").innerHTML=board.map((s,i)=>`<tr>
+    <td>${i+1}</td><td><b>${s.username}</b></td>
+    <td>${s.current?('Challenge #'+s.current):'<span class="muted">Not active</span>'}</td>
+    <td>${s.solved.length}</td><td class="pts">${s.points}</td></tr>`).join("");
+}
+setInterval(()=>{if(tab==="dashboard")renderDashboard();if(tab==="challenges")renderChallenges()},4000);
+
+/* ---------- admin ---------- */
+async function renderAdmin(){
+  const rows=await api("/api/admin/challenges");
+  $("#adminBody").innerHTML=rows.map(c=>`<tr>
+    <td><b>${c.name}</b></td><td>${c.category}</td><td>${c.level_name}</td><td>${c.points}</td>
+    <td><span class="badge ${c.available?'ok':'bad'}">${c.available?'Available':'Disabled'}</span></td>
+    <td><div class="row">
+      <button class="btn sm" onclick="toggleChallenge(${c.id})">${c.available?'Disable':'Enable'}</button>
+      <button class="btn sm danger" onclick="deleteChallenge(${c.id})">Delete</button>
+    </div></td></tr>`).join("");
+}
+async function toggleChallenge(id){await api(`/api/admin/challenges/${id}/toggle`,{method:"POST"});renderAdmin()}
+async function deleteChallenge(id){
+  if(!confirm("Delete this challenge?"))return;
+  await api(`/api/admin/challenges/${id}`,{method:"DELETE"});renderAdmin();
+}
+$("#addForm").onsubmit=async e=>{
+  e.preventDefault();$("#addErr").hidden=true;
+  try{
+    await api("/api/admin/challenges",{method:"POST",body:JSON.stringify({
+      name:$("#f-name").value, category:$("#f-cat").value, level:$("#f-level").value,
+      points:$("#f-points").value, description:$("#f-desc").value, flag:$("#f-flag").value
+    })});
+    e.target.reset();toast("Challenge added");renderAdmin();
+  }catch(err){$("#addErr").textContent=err.message;$("#addErr").hidden=false}
+};
+
+/* ---------- boot ---------- */
+(async()=>{
+  try{ const u=await api("/api/me"); me=u; await start(); }
+  catch(e){ /* not logged in, show login form */ }
+})();
+</script>
+</body>
+</html>
