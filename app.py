@@ -305,7 +305,7 @@ def submit_flag(cid):
     if not ch:
         return jsonify(error="unknown challenge"), 404
     if hashlib.sha256(flag.encode()).hexdigest() != ch["flag_hash"]:
-        return jsonify(ok=False, error="incorrect flag"), 200
+        return jsonify(ok=False, error="incorrect answer"), 200
     db.execute(
         "INSERT OR IGNORE INTO solves(user_id, challenge_id) VALUES(?,?)", (user["id"], cid)
     )

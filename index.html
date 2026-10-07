@@ -52,8 +52,12 @@
 
     <section id="v-dashboard" hidden>
       <div class="head"><h1>Dashboard</h1></div>
+      <div class="legend">
+        <span><i class="cell done"></i> Solved</span>
+        <span><i class="cell todo"></i> Not solved</span>
+      </div>
       <div class="tablewrap"><table>
-        <thead><tr><th>#</th><th>Player</th><th>Working on</th><th>Solved</th><th>Hints used</th><th>Points</th></tr></thead>
+        <thead><tr><th>#</th><th>Player</th><th>Working on</th><th>Progress</th><th>Hints used</th><th>Points</th></tr></thead>
         <tbody id="board"></tbody>
       </table></div>
     </section>
@@ -69,7 +73,7 @@
           <select id="f-level"><option value="1">Beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select>
           <label>Points</label><input id="f-points" type="number" value="100" required>
           <label>Description</label><textarea id="f-desc" required></textarea>
-          <label>Flag</label><input id="f-flag" placeholder="FLAG{...}" required>
+          <label>Answer</label><input id="f-flag" placeholder="The correct answer" required>
           <label>Hint (optional, costs the player 100 points)</label><textarea id="f-hint"></textarea>
           <button class="btn primary" type="submit" style="margin-top:1rem">Add challenge</button>
           <p class="error" id="addErr" hidden></p>
@@ -169,8 +173,8 @@ async function openDrawer(id){
   if(c.status==="active")body=`
     <div class="connect" id="connectInfo">Loading connection info…</div>
     <div class="row"><button class="btn" onclick="act(${id},'reset')">Reset</button><button class="btn danger" onclick="act(${id},'stop')">Stop</button></div>
-    <label>Flag</label>
-    <div class="row"><input id="flagInput" placeholder="FLAG{...}" style="flex:1"><button class="btn" onclick="submitFlag(${id})">Submit</button></div>`;
+    <label>Answer</label>
+    <div class="row"><input id="flagInput" placeholder="Type your answer" style="flex:1"><button class="btn" onclick="submitFlag(${id})">Submit</button></div>`;
   if(c.status==="solved")body=`<p style="margin-top:1rem"><span class="badge ok">Solved</span> ${c.points} points earned.</p>`;
 
   let hintBlock="";
@@ -213,19 +217,21 @@ async function askHint(id){
 }
 async function submitFlag(id){
   const val=$("#flagInput").value.trim();
-  if(!val)return toast("Enter a flag first");
+  if(!val)return toast("Enter an answer first");
   const data=await api(`/api/challenges/${id}/submit`,{method:"POST",body:JSON.stringify({flag:val})});
   if(data.ok){toast(`Correct! +${data.points} points`);await renderChallenges();await openDrawer(id)}
-  else toast(data.error||"Incorrect flag");
+  else toast(data.error||"Incorrect answer");
 }
 
 /* ---------- dashboard ---------- */
 async function renderDashboard(){
+  if(!challenges.length) challenges=await api("/api/challenges");
   const board=await api("/api/dashboard");
   $("#board").innerHTML=board.map((s,i)=>`<tr>
     <td>${i+1}</td><td><b>${s.username}</b></td>
     <td>${s.current?('Challenge #'+s.current):'<span class="muted">Not active</span>'}</td>
-    <td>${s.solved.length}</td><td>${s.hints_used}</td><td class="pts">${s.points}</td></tr>`).join("");
+    <td>${challenges.map(c=>`<i class="cell ${s.solved.includes(c.id)?'done':'todo'}" title="${c.name}"></i>`).join("")}</td>
+    <td>${s.hints_used}</td><td class="pts">${s.points}</td></tr>`).join("");
 }
 setInterval(()=>{if(tab==="dashboard")renderDashboard();if(tab==="challenges")renderChallenges()},4000);
 
