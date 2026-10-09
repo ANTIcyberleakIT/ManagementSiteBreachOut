@@ -1,0 +1,9 @@
+[Unit]
+Description=BreachOut maintenance elke minuut
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target

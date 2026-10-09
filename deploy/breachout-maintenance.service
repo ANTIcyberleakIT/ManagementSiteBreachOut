@@ -1,0 +1,11 @@
+# Ruimt verlopen sessies op (US37) en verwijdert deelnemers na 90 dagen.
+# Wordt elke minuut gestart door breachout-maintenance.timer.
+[Unit]
+Description=BreachOut maintenance (sessies opruimen, 90-dagen-regel)
+
+[Service]
+Type=oneshot
+User=beheer
+WorkingDirectory=/home/beheer/breachout-backend-repo
+EnvironmentFile=-/etc/breachout.env
+ExecStart=/home/beheer/breachout-backend-repo/venv/bin/python app.py maintenance

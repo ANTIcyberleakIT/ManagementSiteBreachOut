@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BreachOut</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_v }}">
 </head>
 <body>
 
@@ -13,21 +13,22 @@
       <h1>BreachOut</h1>
       <p class="muted">Log in to start your challenges.</p>
       <label for="u">Username</label>
-      <input id="u" required>
+      <input id="u" required autocomplete="username">
       <label for="p">Password</label>
-      <input id="p" type="password" required>
+      <input id="p" type="password" required autocomplete="current-password">
       <button class="btn primary" type="submit">Log in</button>
-      <p class="muted" style="margin-top:1rem;font-size:.85rem">No account yet? <a href="#" id="toRegister">Register</a></p>
+      <p class="muted small" style="margin-top:1rem">No account yet? <a href="#" id="toRegister">Register</a></p>
       <p class="error" id="loginErr" hidden></p>
     </form>
     <form class="login" id="registerForm" hidden>
       <h1>Register</h1>
       <label for="ru">Username</label>
-      <input id="ru" required>
+      <input id="ru" required autocomplete="username" minlength="3" maxlength="30">
       <label for="rp">Password</label>
-      <input id="rp" type="password" required>
+      <input id="rp" type="password" required autocomplete="new-password" minlength="6">
       <button class="btn primary" type="submit">Create account</button>
-      <p class="muted" style="margin-top:1rem;font-size:.85rem">Already have an account? <a href="#" id="toLogin">Log in</a></p>
+      <p class="muted small" style="margin-top:1rem">Participant accounts are deleted automatically after 90 days, including scores and hints.</p>
+      <p class="muted small">Already have an account? <a href="#" id="toLogin">Log in</a></p>
       <p class="error" id="regErr" hidden></p>
     </form>
   </div>
@@ -42,205 +43,484 @@
     </div>
     <div class="hazard"></div>
   </header>
+  <div class="sessionbar" id="sessionBar" hidden></div>
 
   <main>
+    <!-- CHALLENGES -->
     <section id="v-challenges">
       <div class="head"><div><h1>Challenges</h1><p class="muted">Pick a challenge and start your own environment.</p></div></div>
       <div class="filters" id="filters"></div>
       <div class="grid" id="grid"></div>
     </section>
 
-    <section id="v-dashboard" hidden>
-      <div class="head"><h1>Dashboard</h1></div>
+    <!-- SCOREBOARD -->
+    <section id="v-scoreboard" hidden>
+      <div class="head">
+        <div><h1>Scoreboard</h1><p class="muted">Updates live, no refresh needed.</p></div>
+        <span class="badge" id="liveBadge">Connecting…</span>
+      </div>
+      <div class="legend">
+        <span><i class="cell done"></i> Completed</span>
+        <span><i class="cell busy"></i> In progress</span>
+        <span><i class="cell todo"></i> Not done</span>
+      </div>
+      <h2>Teams</h2>
       <div class="tablewrap"><table>
-        <thead><tr><th>#</th><th>Player</th><th>Working on</th><th>Solved</th><th>Points</th></tr></thead>
-        <tbody id="board"></tbody>
+        <thead><tr><th>#</th><th>Team</th><th>Members</th><th>Progress</th><th>Session</th><th>Points</th></tr></thead>
+        <tbody id="teamBoard"></tbody>
+      </table></div>
+      <h2>Players</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>#</th><th>Player</th><th>Team</th><th>Working on</th><th>Progress</th><th>Hints</th><th>Points</th></tr></thead>
+        <tbody id="playerBoard"></tbody>
       </table></div>
     </section>
 
-    <section id="v-admin" hidden>
-      <div class="head"><h1>Admin</h1></div>
-      <div class="formcard">
-        <h2>Add challenge</h2>
-        <form id="addForm">
-          <label>Name</label><input id="f-name" required>
-          <label>Category</label><input id="f-cat" required>
-          <label>Level</label>
-          <select id="f-level"><option value="1">Beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select>
-          <label>Points</label><input id="f-points" type="number" value="100" required>
-          <label>Description</label><textarea id="f-desc" required></textarea>
-          <label>Flag</label><input id="f-flag" placeholder="FLAG{...}" required>
-          <button class="btn primary" type="submit" style="margin-top:1rem">Add challenge</button>
-          <p class="error" id="addErr" hidden></p>
-        </form>
+    <!-- TEAMS -->
+    <section id="v-teams" hidden>
+      <div class="head"><div><h1>Teams</h1><p class="muted">Create a team or join one. You cannot switch teams during a running session.</p></div></div>
+      <div class="formcard" style="max-width:460px;margin-bottom:1rem">
+        <h2>Create a team</h2>
+        <label for="teamName">Team name</label>
+        <input id="teamName" maxlength="40" placeholder="e.g. Red Team">
+        <button class="btn primary" data-act="createTeam">Create team</button>
+        <p class="muted small" id="teamHint"></p>
+        <p class="error" id="teamErr" hidden></p>
       </div>
       <div class="tablewrap"><table>
-        <thead><tr><th>Name</th><th>Category</th><th>Level</th><th>Points</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Team</th><th>Members</th><th>Session</th><th></th></tr></thead>
+        <tbody id="teamsBody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- GAME MASTER -->
+    <section id="v-gm" hidden>
+      <div class="head"><div><h1>Game master</h1><p class="muted">Run sessions, help teams and follow the live scoreboard.</p></div></div>
+      <div class="cols">
+        <div class="formcard">
+          <h2>Start a session</h2>
+          <label for="sessTeam">Team</label><select id="sessTeam"></select>
+          <label for="sessMinutes">Duration (minutes)</label><input id="sessMinutes" type="number" value="60" min="5" max="480">
+          <button class="btn primary" data-act="startSession">Start session</button>
+          <p class="muted small" style="margin-top:.6rem">When the session ends, every environment of the team is cleaned up automatically (target: within 5 minutes).</p>
+          <p class="error" id="sessErr" hidden></p>
+        </div>
+        <div class="formcard">
+          <h2>Help a team</h2>
+          <label for="helpTeam">Team</label><select id="helpTeam"></select>
+          <label for="helpChallenge">Challenge</label><select id="helpChallenge"></select>
+          <label for="helpText">Hint text (optional, empty = send the stored hint)</label><textarea id="helpText" maxlength="500"></textarea>
+          <div class="row"><button class="btn primary" data-act="sendHint">Send hint</button><button class="btn danger" data-act="resetTeam">Reset challenge</button></div>
+          <p class="muted small" style="margin-top:.6rem">Hints from the game master are free for the players. Reset only affects members who have this challenge running.</p>
+        </div>
+        <div class="formcard">
+          <h2>Team members</h2>
+          <label for="assignPlayer">Player</label><select id="assignPlayer"></select>
+          <label for="assignTeam">Team</label><select id="assignTeam"></select>
+          <button class="btn" data-act="assign">Assign</button>
+        </div>
+      </div>
+      <h2>Sessions</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Team</th><th>Status</th><th>Time</th><th>Cleanup</th><th></th></tr></thead>
+        <tbody id="sessBody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="v-admin" hidden>
+      <div class="head"><h1>Admin</h1></div>
+
+      <h2>Users &amp; rights</h2>
+      <p class="muted small">Participants are deleted automatically 90 days after their account was created, including scores, hints and environments.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Username</th><th>Role</th><th>Team</th><th>Created</th><th>Auto-delete in</th><th></th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table></div>
+
+      <h2>Challenges</h2>
+      <div class="cols">
+        <div class="formcard">
+          <h3>Add challenge</h3>
+          <form id="addForm">
+            <label for="f-name">Name</label><input id="f-name" required>
+            <label for="f-cat">Category</label><input id="f-cat" required>
+            <label for="f-level">Level</label>
+            <select id="f-level"><option value="1">Beginner</option><option value="2">Intermediate</option><option value="3">Advanced</option></select>
+            <label for="f-points">Points</label><input id="f-points" type="number" value="100" min="0" required>
+            <label for="f-desc">Description</label><textarea id="f-desc" required></textarea>
+            <label for="f-flag">Answer</label><input id="f-flag" placeholder="The correct answer" required>
+            <label for="f-hint">Hint (optional, costs the player 10 points)</label><textarea id="f-hint"></textarea>
+            <button class="btn primary" type="submit">Add challenge</button>
+            <p class="error" id="addErr" hidden></p>
+          </form>
+        </div>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Name</th><th>Category</th><th>Level</th><th>Points</th><th>Status</th><th></th></tr></thead>
         <tbody id="adminBody"></tbody>
+      </table></div>
+
+      <h2>Environment log</h2>
+      <p class="muted small">Reset and cleanup actions are timed against the 5-minute target.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Time (UTC)</th><th>Action</th><th>Challenge</th><th>Player</th><th>Duration</th><th>Result</th></tr></thead>
+        <tbody id="logBody"></tbody>
       </table></div>
     </section>
   </main>
 </div>
 
-<aside class="drawer" id="drawer"></aside>
+<aside class="drawer" id="drawer" aria-label="Challenge details"></aside>
 
+{% raw %}
 <script>
 const $=s=>document.querySelector(s);
-let me=null, tab="challenges", challenges=[], openId=null;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60,p=n=>String(n).padStart(2,"0");return h?`${h}:${p(m)}:${p(x)}`:`${p(m)}:${p(x)}`};
+const local=s=>s?new Date(s.replace(" ","T")+"Z").toLocaleString():"-";
+const countdown=sec=>`<b data-end="${Date.now()+sec*1000}">${fmt(sec)}</b>`;
 
-function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2400)}
+let me=null, tab="challenges", challenges=[], openId=null, drawerStatus=null, drawerBusy=false;
+let filter="All", es=null, sseOk=false;
+
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2800)}
 async function api(path,opts={}){
-  const res=await fetch(path,{headers:{"Content-Type":"application/json"},credentials:"same-origin",...opts});
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error||"Request failed");
+  const o={credentials:"same-origin",...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})}};
+  if(o.body&&typeof o.body!=="string")o.body=JSON.stringify(o.body);
+  const res=await fetch(path,o);
+  let data={};try{data=await res.json()}catch(e){}
+  if(res.status===401&&me){location.reload();return new Promise(()=>{})}
+  if(!res.ok)throw new Error(data.error||("Request failed ("+res.status+")"));
   return data;
 }
+const post=(p,b)=>api(p,{method:"POST",body:b||{}});
+const put=(p,b)=>api(p,{method:"PUT",body:b||{}});
+const del=p=>api(p,{method:"DELETE"});
+async function guard(fn){try{return await fn()}catch(err){toast(err.message)}}
+async function busy(btn,fn){
+  const label=btn&&btn.textContent; if(btn){btn.disabled=true;btn.textContent="Working…"}
+  try{return await fn()}finally{if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=label}}
+}
+function fillSelect(sel,items,blank){
+  const sig=JSON.stringify([blank,items]); if(sel.dataset.sig===sig)return;
+  const prev=sel.value;
+  sel.innerHTML=(blank!=null?`<option value="">${esc(blank)}</option>`:"")+items.map(i=>`<option value="${esc(i.value)}">${esc(i.label)}</option>`).join("");
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  sel.dataset.sig=sig;
+}
 
-/* ---------- auth ---------- */
+/* ---------- login / registratie ---------- */
 $("#toRegister").onclick=e=>{e.preventDefault();$("#loginForm").hidden=true;$("#registerForm").hidden=false};
 $("#toLogin").onclick=e=>{e.preventDefault();$("#registerForm").hidden=true;$("#loginForm").hidden=false};
-
 $("#loginForm").onsubmit=async e=>{
   e.preventDefault();$("#loginErr").hidden=true;
-  try{
-    const data=await api("/api/auth/login",{method:"POST",body:JSON.stringify({username:$("#u").value,password:$("#p").value})});
-    me={username:data.username,role:data.role}; start();
-  }catch(err){$("#loginErr").textContent=err.message;$("#loginErr").hidden=false}
+  try{await post("/api/auth/login",{username:$("#u").value,password:$("#p").value});await boot()}
+  catch(err){$("#loginErr").textContent=err.message;$("#loginErr").hidden=false}
 };
 $("#registerForm").onsubmit=async e=>{
   e.preventDefault();$("#regErr").hidden=true;
   try{
-    await api("/api/auth/register",{method:"POST",body:JSON.stringify({username:$("#ru").value,password:$("#rp").value})});
+    await post("/api/auth/register",{username:$("#ru").value,password:$("#rp").value});
     toast("Account created, you can log in now");
     $("#registerForm").hidden=true;$("#loginForm").hidden=false;
   }catch(err){$("#regErr").textContent=err.message;$("#regErr").hidden=false}
 };
-$("#logout").onclick=async()=>{await api("/api/auth/logout",{method:"POST"});location.reload()};
+$("#logout").onclick=async()=>{await post("/api/auth/logout");location.reload()};
 
-async function start(){
+/* ---------- app starten ---------- */
+let navSig="";
+function buildNav(){
+  const sig=me.role;if(sig===navSig)return;navSig=sig;
+  $("#nav").innerHTML=TABS().map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join("");
+  const allowed=TABS().map(t=>t[0]);
+  if(!allowed.includes(tab)){tab="challenges";["challenges","scoreboard","teams","gm","admin"].forEach(x=>$("#v-"+x).hidden=x!=="challenges")}
+  document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.tab===tab)b.setAttribute("aria-current","page")});
+}
+async function loadMe(){
+  me=await api("/api/me");
+  $("#who").textContent=me.username+({admin:" (admin)",gamemaster:" (game master)"}[me.role]||"")+(me.team?" · "+me.team.name:"");
+  const bar=$("#sessionBar");
+  if(me.session){bar.hidden=false;bar.innerHTML=`Session running for ${esc(me.team.name)} · time left ${countdown(me.session.remaining)}`}
+  else bar.hidden=true;
+  if(!$("#app").hidden)buildNav();
+}
+const TABS=()=>[["challenges","Challenges"],["scoreboard","Scoreboard"],["teams","Teams"],
+  ...(["gamemaster","admin"].includes(me.role)?[["gm","Game master"]]:[]),
+  ...(me.role==="admin"?[["admin","Admin"]]:[])];
+
+async function boot(){
+  await loadMe();
   $("#v-login").hidden=true;$("#app").hidden=false;
-  $("#who").textContent=me.username+(me.role==="admin"?" (admin)":"");
-  const t=[["challenges","Challenges"],["dashboard","Dashboard"]];
-  if(me.role==="admin")t.push(["admin","Admin"]);
-  $("#nav").innerHTML=t.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join("");
-  $("#nav").onclick=e=>{if(e.target.dataset.tab)go(e.target.dataset.tab)};
-  go("challenges");
+  buildNav();
+  connectLive();go("challenges");
 }
 function go(k){
   tab=k;closeDrawer();
-  ["challenges","dashboard","admin"].forEach(x=>$("#v-"+x).hidden=x!==k);
-  document.querySelectorAll("#nav button").forEach(b=>b.toggleAttribute("aria-current",false));
-  document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.tab===k)b.setAttribute("aria-current","page")});
+  ["challenges","scoreboard","teams","gm","admin"].forEach(x=>$("#v-"+x).hidden=x!==k);
+  document.querySelectorAll("#nav button").forEach(b=>{b.dataset.tab===k?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current")});
   render();
 }
 async function render(){
-  if(tab==="challenges")await renderChallenges();
-  if(tab==="dashboard")await renderDashboard();
-  if(tab==="admin")await renderAdmin();
+  await guard(async()=>{
+    if(tab==="challenges")await renderChallenges();
+    if(tab==="scoreboard")await renderScoreboard();
+    if(tab==="teams")await renderTeams();
+    if(tab==="gm")await renderGM();
+    if(tab==="admin")await renderAdmin();
+  });
 }
 
+/* ---------- live updates (Server-Sent Events) ---------- */
+let liveTimer=null;
+function refreshLive(){clearTimeout(liveTimer);liveTimer=setTimeout(async()=>{try{await loadMe();await render()}catch(e){console.error("live refresh failed:",e)}},200)}
+function setLive(ok){
+  sseOk=ok;const b=$("#liveBadge");
+  b.textContent=ok?"Live":"Reconnecting…";b.className="badge "+(ok?"ok live":"warn");
+}
+function connectLive(){
+  if(es)es.close();
+  es=new EventSource("/api/stream");
+  es.onopen=()=>setLive(true);
+  es.onmessage=()=>{setLive(true);refreshLive()};
+  es.onerror=()=>setLive(false);
+}
+setInterval(()=>{if(me&&!sseOk)refreshLive()},8000);          // vangnet als de live-verbinding wegvalt
+setInterval(()=>{                                              // aftellende klokken
+  document.querySelectorAll("[data-end]").forEach(el=>{
+    const s=Math.max(0,Math.round((+el.dataset.end-Date.now())/1000));
+    el.textContent=fmt(s);
+    if(s===0&&!el.dataset.fired){el.dataset.fired="1";setTimeout(refreshLive,3000)}
+  });
+},1000);
+
 /* ---------- challenges ---------- */
-let filter="All";
 async function renderChallenges(){
   challenges=await api("/api/challenges");
   const cats=["All",...new Set(challenges.map(c=>c.category))];
-  $("#filters").innerHTML=cats.map(c=>`<button aria-pressed="${c===filter}" data-f="${c}">${c}</button>`).join("");
+  if(!cats.includes(filter))filter="All";
+  $("#filters").innerHTML=cats.map(c=>`<button aria-pressed="${c===filter}" data-f="${esc(c)}">${esc(c)}</button>`).join("");
   $("#grid").innerHTML=challenges.filter(c=>filter==="All"||c.category===filter).map(c=>`
     <button class="card ${c.status==='solved'?'solved':''} ${c.status==='active'?'active':''}" data-id="${c.id}">
-      <div class="muted">${c.category} · ${c.level_name}</div>
-      <h3>${c.name}</h3>
+      <div class="muted">${esc(c.category)} · ${esc(c.level_name)}</div>
+      <h3>${esc(c.name)}</h3>
       <div class="meta">
-        <span class="badge ${c.status==='solved'?'ok':c.status==='active'?'busy':c.available?'':'bad'}">${!c.available?'Unavailable':c.status==='stopped'?'Available':c.status}</span>
+        <span class="badge ${c.status==='solved'?'ok':c.status==='active'?'busy':c.available?'':'bad'}">${!c.available?'Unavailable':c.status==='stopped'?'Available':c.status==='active'?'Running':'Solved'}</span>
         <span class="pts">${c.points}</span>
       </div>
     </button>`).join("");
+  if(openId!==null&&!drawerBusy){
+    const c=challenges.find(x=>x.id===openId);
+    if(!c)closeDrawer();
+    else if(c.status!==drawerStatus)openDrawer(openId);
+    else if($("#hintArea"))$("#hintArea").innerHTML=hintHtml(c);
+  }
 }
 $("#filters").onclick=e=>{if(e.target.dataset.f){filter=e.target.dataset.f;renderChallenges()}};
 $("#grid").onclick=e=>{const c=e.target.closest(".card");if(c)openDrawer(+c.dataset.id)};
 
-async function openDrawer(id){
-  openId=id;
-  const c=challenges.find(x=>x.id===id);
+function hintHtml(c){
+  if(c.hint_used)return `<div class="connect hintbox"><b>Hint</b><p>${esc(c.hint)}</p></div>`;
+  if(c.has_hint)return `<div class="row"><button class="btn" data-act="askHint" data-id="${c.id}">Ask for hint (−${c.hint_penalty} points)</button></div>`;
+  return "";
+}
+function connectHtml(k){return k?`<div><span>Address</span><span>${esc(k.address)}</span></div><div><span>User</span><span>${esc(k.user)}</span></div><div><span>Password</span><span>${esc(k.password)}</span></div>`:"Loading connection info…"}
+function openDrawer(id){
+  const c=challenges.find(x=>x.id===id);if(!c)return closeDrawer();
+  openId=id;drawerStatus=c.status;
   let body="";
   if(c.status==="stopped")body=c.available
-    ? `<div class="row" style="margin-top:1rem"><button class="btn primary" onclick="act(${id},'start')">Start environment</button></div>`
-    : `<p class="muted" style="margin-top:1rem">Not available right now.</p>`;
+    ?`<div class="row" style="margin-top:1rem"><button class="btn primary" data-act="env" data-do="start" data-id="${id}">Start environment</button></div>`
+    :`<p class="muted" style="margin-top:1rem">Not available right now.</p>`;
   if(c.status==="active")body=`
-    <div class="connect" id="connectInfo">Loading connection info…</div>
-    <div class="row"><button class="btn" onclick="act(${id},'reset')">Reset</button><button class="btn danger" onclick="act(${id},'stop')">Stop</button></div>
-    <label>Flag</label>
-    <div class="row"><input id="flagInput" placeholder="FLAG{...}" style="flex:1"><button class="btn" onclick="submitFlag(${id})">Submit</button></div>`;
+    <div class="connect">${connectHtml(c.connection)}</div>
+    <div class="row"><button class="btn" data-act="env" data-do="reset" data-id="${id}">Reset</button><button class="btn danger" data-act="env" data-do="stop" data-id="${id}">Stop</button></div>
+    <label for="answerInput">Answer</label>
+    <div class="row"><input id="answerInput" placeholder="Type your answer" style="flex:1" autocomplete="off"><button class="btn" data-act="submit" data-id="${id}">Submit</button></div>`;
   if(c.status==="solved")body=`<p style="margin-top:1rem"><span class="badge ok">Solved</span> ${c.points} points earned.</p>`;
-  $("#drawer").innerHTML=`<div class="row" style="justify-content:space-between"><span class="muted">${c.category} · ${c.level_name}</span><button class="btn sm" onclick="closeDrawer()">Close</button></div>
-    <h2 style="margin-top:.75rem">${c.name}</h2><p class="pts">${c.points} points</p>
-    <p style="margin-top:.75rem">${c.description}</p>${body}`;
+  $("#drawer").innerHTML=`<div class="row" style="justify-content:space-between"><span class="muted">${esc(c.category)} · ${esc(c.level_name)}</span><button class="btn sm" data-act="closeDrawer">Close</button></div>
+    <h2 style="margin-top:.75rem">${esc(c.name)}</h2><p class="pts">${c.points} points</p>
+    <p style="margin-top:.75rem">${esc(c.description)}</p>${body}<div id="hintArea" style="margin-top:1rem">${hintHtml(c)}</div>`;
   $("#drawer").classList.add("open");
 }
-function closeDrawer(){$("#drawer").classList.remove("open");openId=null}
+function closeDrawer(){$("#drawer").classList.remove("open");openId=null;drawerStatus=null}
+$("#drawer").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="answerInput"){const b=$("#drawer [data-act=submit]");if(b)b.click()}});
 
-async function act(id,action){
-  try{
-    const data=await api(`/api/challenges/${id}/${action}`,{method:"POST"});
-    await renderChallenges();
-    if(openId===id)await openDrawer(id);
-    if(action==="start"||action==="reset"){
-      const el=$("#connectInfo");
-      if(el)el.innerHTML=`<div><span>Address</span><span>${data.address}</span></div><div><span>User</span><span>${data.user}</span></div><div><span>Password</span><span>${data.password}</span></div>`;
-      toast(action==="start"?"Environment is ready":"Environment reset");
-    }
-    if(action==="stop")toast("Environment stopped");
-  }catch(err){toast(err.message)}
-}
-async function submitFlag(id){
-  const val=$("#flagInput").value.trim();
-  if(!val)return toast("Enter a flag first");
-  const data=await api(`/api/challenges/${id}/submit`,{method:"POST",body:JSON.stringify({flag:val})});
-  if(data.ok){toast(`Correct! +${data.points} points`);await renderChallenges();await openDrawer(id)}
-  else toast(data.error||"Incorrect flag");
+/* ---------- scoreboard ---------- */
+const squares=(done,busy,hinted=[])=>challenges.map(c=>{
+  const st=done.includes(c.id)?"done":busy.includes(c.id)?"busy":"todo";
+  const txt={done:"Completed",busy:"In progress",todo:"Not done"}[st]+(st==="done"&&hinted.includes(c.id)?" (hint used)":"");
+  return `<i class="cell ${st}" title="${esc(c.name)}: ${txt}" aria-label="${esc(c.name)}: ${txt}"></i>`}).join("");
+async function renderScoreboard(){
+  challenges=await api("/api/challenges");
+  const d=await api("/api/scoreboard");
+  const names=Object.fromEntries(challenges.map(c=>[c.id,c.name]));
+  $("#teamBoard").innerHTML=d.teams.length?d.teams.map((t,i)=>`<tr>
+    <td>${i+1}</td><td><b>${esc(t.name)}</b></td><td>${t.members.length?esc(t.members.join(", ")):'<span class="muted">no members</span>'}</td>
+    <td>${squares(t.done,t.busy)}</td>
+    <td>${t.remaining!==null?`<span class="badge busy">${countdown(t.remaining)}</span>`:'<span class="muted">-</span>'}</td>
+    <td class="pts">${t.points}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">No teams yet.</td></tr>`;
+  $("#playerBoard").innerHTML=d.players.length?d.players.map((p,i)=>`<tr>
+    <td>${i+1}</td><td><b>${esc(p.username)}</b></td><td>${p.team?esc(p.team):'<span class="muted">-</span>'}</td>
+    <td>${p.current?esc(names[p.current]||"#"+p.current):'<span class="muted">Not active</span>'}</td>
+    <td>${squares(p.done,p.busy,p.hinted)}</td><td>${p.hints_used}</td><td class="pts">${p.points}</td></tr>`).join(""):`<tr><td colspan="7" class="empty">No players yet.</td></tr>`;
 }
 
-/* ---------- dashboard ---------- */
-async function renderDashboard(){
-  const board=await api("/api/dashboard");
-  $("#board").innerHTML=board.map((s,i)=>`<tr>
-    <td>${i+1}</td><td><b>${s.username}</b></td>
-    <td>${s.current?('Challenge #'+s.current):'<span class="muted">Not active</span>'}</td>
-    <td>${s.solved.length}</td><td class="pts">${s.points}</td></tr>`).join("");
+/* ---------- teams ---------- */
+async function renderTeams(){
+  const teams=await api("/api/teams");
+  const isGM=["gamemaster","admin"].includes(me.role);
+  $("#teamHint").textContent=me.role==="player"?"You join the team automatically when you create it.":"";
+  $("#teamsBody").innerHTML=teams.length?teams.map(t=>{
+    let act="";
+    if(me.role==="player")act=(me.team&&me.team.id===t.id)?`<button class="btn sm" data-act="leaveTeam">Leave</button>`:`<button class="btn sm" data-act="joinTeam" data-id="${t.id}">Join</button>`;
+    if(isGM)act+=` <button class="btn sm danger" data-act="deleteTeam" data-id="${t.id}" data-name="${esc(t.name)}">Delete</button>`;
+    return `<tr><td><b>${esc(t.name)}</b>${me.team&&me.team.id===t.id?' <span class="badge ok">your team</span>':''}</td>
+      <td>${t.members.length?esc(t.members.join(", ")):'<span class="muted">no members</span>'}</td>
+      <td>${t.remaining!==null?`<span class="badge busy">${countdown(t.remaining)}</span>`:'<span class="muted">-</span>'}</td><td>${act}</td></tr>`}).join("")
+    :`<tr><td colspan="4" class="empty">No teams yet. Create the first one above.</td></tr>`;
 }
-setInterval(()=>{if(tab==="dashboard")renderDashboard();if(tab==="challenges")renderChallenges()},4000);
+
+/* ---------- game master ---------- */
+async function renderGM(){
+  const [teams,players,sessions,chs]=await Promise.all([api("/api/teams"),api("/api/gm/players"),api("/api/gm/sessions"),api("/api/challenges")]);
+  challenges=chs;
+  const tOpts=teams.map(t=>({value:t.id,label:t.name}));
+  fillSelect($("#sessTeam"),tOpts,"Choose a team…");
+  fillSelect($("#helpTeam"),tOpts,"Choose a team…");
+  fillSelect($("#assignTeam"),tOpts,"(no team)");
+  fillSelect($("#helpChallenge"),challenges.map(c=>({value:c.id,label:c.name})),"Choose a challenge…");
+  fillSelect($("#assignPlayer"),players.map(p=>({value:p.id,label:p.username+(p.team?" ("+p.team+")":"")})),"Choose a player…");
+  $("#sessBody").innerHTML=sessions.length?sessions.map(s=>{
+    const active=s.status==="active";
+    const status=active?'<span class="badge busy">Running</span>':s.status==="ended"?'<span class="badge">Ended</span>':'<span class="badge warn">Cleaning up…</span>';
+    const time=active?countdown(s.remaining):esc(local(s.ended_at));
+    const clean=s.cleanup_seconds===null?'<span class="muted">-</span>':s.cleanup_failed?`<span class="badge bad">cleanup failed (${s.cleanup_failed})</span>`:`<span class="badge ${s.within_limit?'ok':'bad'}">${s.cleanup_seconds}s${s.within_limit?'':' (over 5 min)'}</span>`;
+    const act=active?`<button class="btn sm" data-act="extend" data-id="${s.id}" data-min="10">+10 min</button> <button class="btn sm" data-act="extend" data-id="${s.id}" data-min="-10">−10 min</button> <button class="btn sm danger" data-act="endSession" data-id="${s.id}">End now</button>`
+      :s.status==="ended"?`<a class="btn sm" href="/api/gm/sessions/${s.id}/export">Export CSV</a>${s.cleanup_failed?` <button class="btn sm danger" data-act="retryCleanup" data-id="${s.id}">Retry cleanup</button>`:""}`:"";
+    return `<tr><td><b>${esc(s.team)}</b></td><td>${status}</td><td>${time}</td><td>${clean}</td><td>${act}</td></tr>`}).join("")
+    :`<tr><td colspan="5" class="empty">No sessions yet.</td></tr>`;
+}
 
 /* ---------- admin ---------- */
 async function renderAdmin(){
-  const rows=await api("/api/admin/challenges");
+  const [rows,users,log]=await Promise.all([api("/api/admin/challenges"),api("/api/admin/users"),api("/api/admin/log")]);
   $("#adminBody").innerHTML=rows.map(c=>`<tr>
-    <td><b>${c.name}</b></td><td>${c.category}</td><td>${c.level_name}</td><td>${c.points}</td>
+    <td><b>${esc(c.name)}</b></td><td>${esc(c.category)}</td><td>${esc(c.level_name)}</td><td>${c.points}</td>
     <td><span class="badge ${c.available?'ok':'bad'}">${c.available?'Available':'Disabled'}</span></td>
-    <td><div class="row">
-      <button class="btn sm" onclick="toggleChallenge(${c.id})">${c.available?'Disable':'Enable'}</button>
-      <button class="btn sm danger" onclick="deleteChallenge(${c.id})">Delete</button>
-    </div></td></tr>`).join("");
-}
-async function toggleChallenge(id){await api(`/api/admin/challenges/${id}/toggle`,{method:"POST"});renderAdmin()}
-async function deleteChallenge(id){
-  if(!confirm("Delete this challenge?"))return;
-  await api(`/api/admin/challenges/${id}`,{method:"DELETE"});renderAdmin();
+    <td><div class="row"><button class="btn sm" data-act="toggleChallenge" data-id="${c.id}">${c.available?'Disable':'Enable'}</button>
+    <button class="btn sm danger" data-act="deleteChallenge" data-id="${c.id}" data-name="${esc(c.name)}">Delete</button></div></td></tr>`).join("");
+  if(!$("#usersBody").contains(document.activeElement)){
+    $("#usersBody").innerHTML=users.map(u=>{
+      const self=u.username===me.username;
+      return `<tr><td><b>${esc(u.username)}</b>${self?' <span class="badge">you</span>':''}</td>
+      <td><select data-change="role" data-id="${u.id}" ${self?"disabled":""}>
+        ${[["player","Participant"],["gamemaster","Game master"],["admin","Admin"]].map(([v,l])=>`<option value="${v}" ${u.role===v?"selected":""}>${l}</option>`).join("")}</select></td>
+      <td>${u.team?esc(u.team):'<span class="muted">-</span>'}</td><td>${esc(local(u.created_at))}</td>
+      <td>${u.days_left===null?'<span class="muted">never</span>':`<span class="badge ${u.days_left<=7?'warn':''}">${u.days_left} days</span>`}</td>
+      <td>${self?"":`<button class="btn sm danger" data-act="deleteUser" data-id="${u.id}" data-name="${esc(u.username)}">Delete</button>`}</td></tr>`}).join("");
+  }
+  $("#logBody").innerHTML=log.length?log.map(l=>`<tr><td>${esc(l.ts)}</td><td>${esc(l.action)}</td><td>${esc(l.challenge)}</td><td>${esc(l.username)}</td>
+    <td>${l.duration===null?'-':l.duration+'s'}</td>
+    <td>${!l.ok?'<span class="badge bad">failed</span>':l.within_limit===false?'<span class="badge bad">over 5 min</span>':l.within_limit===true?'<span class="badge ok">within 5 min</span>':'<span class="badge ok">ok</span>'}</td></tr>`).join("")
+    :`<tr><td colspan="6" class="empty">No actions yet.</td></tr>`;
 }
 $("#addForm").onsubmit=async e=>{
   e.preventDefault();$("#addErr").hidden=true;
   try{
-    await api("/api/admin/challenges",{method:"POST",body:JSON.stringify({
-      name:$("#f-name").value, category:$("#f-cat").value, level:$("#f-level").value,
-      points:$("#f-points").value, description:$("#f-desc").value, flag:$("#f-flag").value
-    })});
-    e.target.reset();toast("Challenge added");renderAdmin();
+    await post("/api/admin/challenges",{name:$("#f-name").value,category:$("#f-cat").value,level:$("#f-level").value,
+      points:$("#f-points").value,description:$("#f-desc").value,flag:$("#f-flag").value,hint:$("#f-hint").value});
+    e.target.reset();toast("Challenge added");render();
   }catch(err){$("#addErr").textContent=err.message;$("#addErr").hidden=false}
 };
+document.addEventListener("change",async e=>{
+  const s=e.target.closest("[data-change=role]");if(!s)return;
+  const r=await guard(()=>put(`/api/admin/users/${s.dataset.id}/role`,{role:s.value}));
+  if(r)toast("Role updated");
+  s.blur();render();
+});
 
-/* ---------- boot ---------- */
-(async()=>{
-  try{ const u=await api("/api/me"); me=u; await start(); }
-  catch(e){ /* not logged in, show login form */ }
-})();
+/* ---------- alle knoppen (event delegation) ---------- */
+const ACTIONS={
+  closeDrawer:()=>closeDrawer(),
+  async env(b){
+    const id=+b.dataset.id,what=b.dataset.do;drawerBusy=true;
+    try{
+      await busy(b,async()=>{const r=await post(`/api/challenges/${id}/${what}`);
+        toast(what==="stop"?"Environment stopped":`Environment ready (${r.seconds}s)`)});
+    }finally{drawerBusy=false}
+    await renderChallenges();openDrawer(id);
+  },
+  async askHint(b){
+    const c=challenges.find(x=>x.id===+b.dataset.id);
+    if(!confirm(`This will cost ${c.hint_penalty} points. Continue?`))return;
+    await post(`/api/challenges/${c.id}/hint`);toast("Hint revealed, points deducted");
+    await renderChallenges();openDrawer(c.id);
+  },
+  async submit(b){
+    const id=+b.dataset.id,val=$("#answerInput").value.trim();
+    if(!val)return toast("Enter an answer first");
+    const r=await post(`/api/challenges/${id}/submit`,{flag:val});
+    if(r.ok){toast(`Correct! +${r.points} points`);await renderChallenges();openDrawer(id)}else toast("Incorrect answer");
+  },
+  async createTeam(){
+    $("#teamErr").hidden=true;
+    try{await post("/api/teams",{name:$("#teamName").value});$("#teamName").value="";await loadMe();render();toast("Team created")}
+    catch(err){$("#teamErr").textContent=err.message;$("#teamErr").hidden=false}
+  },
+  async joinTeam(b){await post(`/api/teams/${b.dataset.id}/join`);await loadMe();render();toast("Joined team")},
+  async leaveTeam(){await post("/api/teams/leave");await loadMe();render();toast("Left team")},
+  async deleteTeam(b){
+    if(!confirm(`Delete team "${b.dataset.name}"? A running session is ended and cleaned up first.`))return;
+    await busy(b,()=>del(`/api/teams/${b.dataset.id}`));await loadMe();render();
+  },
+  async startSession(b){
+    $("#sessErr").hidden=true;
+    try{await busy(b,()=>post("/api/gm/sessions",{team_id:$("#sessTeam").value,minutes:$("#sessMinutes").value}));toast("Session started");render()}
+    catch(err){$("#sessErr").textContent=err.message;$("#sessErr").hidden=false}
+  },
+  async endSession(b){
+    if(!confirm("End this session now? All environments of the team are cleaned up."))return;
+    const r=await busy(b,()=>post(`/api/gm/sessions/${b.dataset.id}/end`));
+    toast(`Cleaned up in ${r.session.cleanup_seconds}s`);render();
+  },
+  async retryCleanup(b){
+    const r=await busy(b,()=>post(`/api/gm/sessions/${b.dataset.id}/retry-cleanup`));
+    toast(r.ok?`Cleaned up ${r.cleaned} environment(s)`:`${r.failed} environment(s) still failing, check the environment log`);render();
+  },
+  async extend(b){await post(`/api/gm/sessions/${b.dataset.id}/extend`,{minutes:+b.dataset.min});render()},
+  async sendHint(b){
+    const r=await busy(b,()=>post(`/api/gm/teams/${$("#helpTeam").value}/hint`,{challenge_id:$("#helpChallenge").value,text:$("#helpText").value}));
+    toast(`Hint sent to ${r.sent_to} player(s)`);$("#helpText").value="";
+  },
+  async resetTeam(b){
+    if(!$("#helpTeam").value||!$("#helpChallenge").value)return toast("Choose a team and a challenge");
+    const r=await busy(b,()=>post(`/api/gm/teams/${$("#helpTeam").value}/reset`,{challenge_id:$("#helpChallenge").value}));
+    toast(`Reset ${r.reset} environment(s) in ${r.seconds}s${r.failed?`, ${r.failed} failed`:""}`);
+  },
+  async assign(){
+    if(!$("#assignPlayer").value)return toast("Choose a player");
+    await put(`/api/gm/users/${$("#assignPlayer").value}/team`,{team_id:$("#assignTeam").value||null});toast("Saved");render();
+  },
+  async toggleChallenge(b){await post(`/api/admin/challenges/${b.dataset.id}/toggle`);render()},
+  async deleteChallenge(b){
+    if(!confirm(`Delete challenge "${b.dataset.name}"? Solves and hints for it are removed too.`))return;
+    await del(`/api/admin/challenges/${b.dataset.id}`);render();
+  },
+  async deleteUser(b){
+    if(!confirm(`Delete user "${b.dataset.name}" and all their data?`))return;
+    await del(`/api/admin/users/${b.dataset.id}`);render();
+  },
+};
+document.addEventListener("click",e=>{
+  const t=e.target.closest("#nav button[data-tab]");if(t)return go(t.dataset.tab);
+  const b=e.target.closest("[data-act]");if(!b||!ACTIONS[b.dataset.act])return;
+  guard(()=>ACTIONS[b.dataset.act](b));
+});
+
+/* ---------- start ---------- */
+(async()=>{try{await boot()}catch(e){/* niet ingelogd: loginscherm blijft zichtbaar */}})();
 </script>
+{% endraw %}
 </body>
 </html>

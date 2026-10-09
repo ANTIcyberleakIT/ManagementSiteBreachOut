@@ -1,0 +1,16 @@
+# Installeren:  sudo cp deploy/breachout.service /etc/systemd/system/breachout.service
+# BELANGRIJK: --worker-class gthread + --threads is nodig voor het live scoreboard.
+# Met de standaard (sync) worker blijft de hele site hangen zodra iemand de live-verbinding opent.
+[Unit]
+Description=BreachOut backend
+After=network.target
+
+[Service]
+User=beheer
+WorkingDirectory=/home/beheer/breachout-backend-repo
+EnvironmentFile=-/etc/breachout.env
+ExecStart=/home/beheer/breachout-backend-repo/venv/bin/gunicorn --worker-class gthread --workers 2 --threads 20 --timeout 120 --bind 127.0.0.1:8000 app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

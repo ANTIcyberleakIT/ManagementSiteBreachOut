@@ -1,0 +1,22 @@
+# Pas dit aan op jullie Proxmox. Het geheim staat NIET in dit bestand maar in /etc/breachout.env.
+proxmox_host: 10.105.30.5
+proxmox_node: pve                 # naam van de node zoals getoond in Proxmox
+proxmox_user: root@pam
+proxmox_token_id: breachout
+proxmox_token_secret: "{{ lookup('env', 'PROXMOX_TOKEN_SECRET') }}"
+proxmox_validate_certs: false     # zelfondertekend certificaat; zet op true met een echt certificaat
+
+clean_snapshot: clean             # naam van de snapshot met de beginstand van elke challenge-VM
+
+# challenge-id (zie Admin -> Challenges) -> VM-id in Proxmox
+challenge_vms:
+  1: 201
+  2: 202
+  3: 203
+  4: 204
+  5: 205
+  6: 206
+  7: 207
+  8: 208
+  9: 209
+  10: 210

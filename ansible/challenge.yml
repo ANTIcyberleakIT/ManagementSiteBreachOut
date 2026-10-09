@@ -1,0 +1,68 @@
+---
+# SJABLOON - nog niet getest tegen jullie Proxmox. Pas vars.yml aan en test per challenge met:
+#   ansible-playbook ansible/challenge.yml -e env_action=reset -e challenge_id=1 -e user_id=1
+#
+# Wordt aangeroepen door app.py via BREACHOUT_ENV_CMD met:
+#   env_action = start | reset | stop | cleanup
+# Op de webserver nodig:
+#   pip install proxmoxer requests          (in dezelfde omgeving als ansible)
+#   ansible-galaxy collection install community.general
+#
+# Let op: dit sjabloon gaat uit van EEN VM per challenge (vars.yml). Als meerdere spelers tegelijk
+# dezelfde challenge doen, raakt een reset ze allemaal. Voor een VM per speler: kloon de basis-VM
+# per user_id (user_id wordt al meegegeven) in plaats van terug te zetten naar de snapshot.
+- name: BreachOut challenge-omgeving beheren
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Controleer invoer
+      ansible.builtin.assert:
+        that:
+          - env_action in ['start', 'reset', 'stop', 'cleanup']
+          - (challenge_id | int) in challenge_vms
+        fail_msg: "Onbekende actie, of deze challenge heeft geen VM in vars.yml"
+
+    - name: VM-id opzoeken
+      ansible.builtin.set_fact:
+        vmid: "{{ challenge_vms[challenge_id | int] }}"
+
+    - name: Terugzetten naar de schone snapshot
+      community.general.proxmox_snap:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+        vmid: "{{ vmid }}"
+        snapname: "{{ clean_snapshot }}"
+        state: rollback
+        timeout: 300
+      when: env_action in ['start', 'reset', 'cleanup']
+
+    - name: VM starten (start en reset)
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ vmid }}"
+        state: started
+      when: env_action in ['start', 'reset']
+
+    - name: VM uitzetten (stop en cleanup)
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_token_id: "{{ proxmox_token_id }}"
+        api_token_secret: "{{ proxmox_token_secret }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ vmid }}"
+        state: stopped
+        force: true
+      when: env_action in ['stop', 'cleanup']

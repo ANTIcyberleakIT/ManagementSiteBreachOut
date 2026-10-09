@@ -1,0 +1,5 @@
+{
+  "name": "breachout-ui-test",
+  "private": true,
+  "dependencies": { "jsdom": "^30.0.0" }
+}
